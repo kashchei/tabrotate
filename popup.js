@@ -98,14 +98,9 @@ async function init() {
           return;
         }
 
-        const newGlobal = {
-          defaultInterval: globalInterval,
-          fullscreenEnabled: document.getElementById('fullscreenToggle').checked,
-          overlayEnabled: document.getElementById('overlayToggle').checked,
-          autoStart: document.getElementById('autoStartToggle').checked
-        };
-        
         const newTabs = {};
+        let hasError = false;
+        
         tabs.forEach(tab => {
           const intervalValue = document.getElementById(`int-${tab.id}`).value;
           const interval = intervalValue ? parseInt(intervalValue) : null;
@@ -113,6 +108,7 @@ async function init() {
           // Validate per-tab interval if provided
           if (interval !== null && !validateInterval(interval)) {
             showError(`Invalid interval for tab: ${tab.title}`);
+            hasError = true;
             return;
           }
           
@@ -122,6 +118,18 @@ async function init() {
             included: document.getElementById(`inc-${tab.id}`).checked
           };
         });
+        
+        // Don't save if there were validation errors
+        if (hasError) {
+          return;
+        }
+
+        const newGlobal = {
+          defaultInterval: globalInterval,
+          fullscreenEnabled: document.getElementById('fullscreenToggle').checked,
+          overlayEnabled: document.getElementById('overlayToggle').checked,
+          autoStart: document.getElementById('autoStartToggle').checked
+        };
         
         chrome.runtime.sendMessage({ type: 'UPDATE_CONFIG', config: newGlobal, tabsConfig: newTabs });
       } catch (error) {
