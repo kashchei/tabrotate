@@ -120,15 +120,11 @@ async function navigate(direction) {
       state.currentIndex = (state.currentIndex - 1 + activeTabs.length) % activeTabs.length;
     }
 
-    // Ensure currentIndex is within bounds
-    state.currentIndex = Math.max(0, Math.min(state.currentIndex, activeTabs.length - 1));
-
     const currentTab = activeTabs[state.currentIndex];
     
     // Verify tab still exists before trying to activate it
-    let tabExists = null;
     try {
-      tabExists = await chrome.tabs.get(currentTab.id);
+      await chrome.tabs.get(currentTab.id);
     } catch (e) {
       console.warn('Tab no longer exists:', currentTab.id);
       // Tab was closed, reset to first tab
