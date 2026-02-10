@@ -13,11 +13,19 @@ let state = {
   }
 };
 
+async function broadcastToAllTabs(message) {
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+  });
+}
+
 chrome.runtime.onStartup.addListener(async () => {
   await loadState();
   if (state.globalConfig.autoStart) {
     state.status = 'running';
     updateIcon('green');
+    broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
     rotate();
   }
 });
@@ -167,13 +175,6 @@ chrome.tabs.onActivated.addListener(activeInfo => {
   }
 });
 
-async function broadcastToAllTabs(message) {
-  const tabs = await chrome.tabs.query({});
-  tabs.forEach(tab => {
-    chrome.tabs.sendMessage(tab.id, message).catch(() => {});
-  });
-}
-
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'START') {
     state.status = 'running';
@@ -198,6 +199,8 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     state.tabsConfig = message.tabsConfig;
     if (!message.config.overlayEnabled) {
       broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
+    } else if (message.config.overlayEnabled && state.status === 'running') {
+      broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
     }
   } else if (message.type === 'GET_STATE') {
     sendResponse(state);
