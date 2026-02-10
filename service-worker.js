@@ -199,7 +199,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     state.tabsConfig = message.tabsConfig;
     if (!message.config.overlayEnabled) {
       broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
-    } else if (message.config.overlayEnabled && state.status === 'running') {
+    } else if (state.status === 'running') {
       broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
     }
   } else if (message.type === 'GET_STATE') {
