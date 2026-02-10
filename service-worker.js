@@ -138,6 +138,14 @@ async function navigate(direction) {
     // Activate the tab
     try {
       await chrome.tabs.update(currentTab.id, { active: true });
+      
+      // Update badge to show current position
+      if (state.status === States.ROTATING) {
+        await chrome.action.setBadgeText({ 
+          text: `${state.currentIndex + 1}/${activeTabs.length}` 
+        });
+        await chrome.action.setBadgeBackgroundColor({ color: '#4CAF50' });
+      }
     } catch (error) {
       console.error('Error activating tab:', error);
       return;
@@ -222,6 +230,7 @@ async function pauseRotation() {
     await updateIcon('yellow');
     await chrome.alarms.clear(ALARM_NAME);
     await chrome.alarms.clear(COUNTDOWN_ALARM_NAME);
+    await chrome.action.setBadgeText({ text: '' });
     await saveState();
   } catch (error) {
     console.error('Error pausing rotation:', error);
@@ -235,6 +244,7 @@ async function stopRotation() {
     await updateIcon('red');
     await chrome.alarms.clear(ALARM_NAME);
     await chrome.alarms.clear(COUNTDOWN_ALARM_NAME);
+    await chrome.action.setBadgeText({ text: '' });
     await saveState();
   } catch (error) {
     console.error('Error stopping rotation:', error);
