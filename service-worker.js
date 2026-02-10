@@ -305,7 +305,8 @@ async function updateCountdown(remaining) {
       chrome.tabs.sendMessage(currentTabs[0].id, { 
         type: 'COUNTDOWN', 
         remaining,
-        nextTitle: nextTitle 
+        nextTitle: nextTitle,
+        status: state.status
       }).catch((error) => {
         // Overlay might not be injected yet, try to inject it
         ensureOverlay(currentTabs[0].id);

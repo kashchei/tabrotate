@@ -74,8 +74,15 @@
     if (msg.type === 'COUNTDOWN') {
       const timer = document.getElementById('kiosk-timer');
       const nextLabel = document.getElementById('kiosk-next-label');
+      const pauseBtn = document.getElementById('kiosk-pause-toggle');
+      
       if (timer) timer.innerText = msg.remaining;
       if (nextLabel && msg.nextTitle) nextLabel.innerText = "Next: " + msg.nextTitle;
+      
+      // Update pause/play button to match current state
+      if (pauseBtn && msg.status) {
+        pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
+      }
     }
   });
 
