@@ -61,6 +61,7 @@ async function init() {
     document.getElementById('fullscreenToggle').checked = state.globalConfig.fullscreenEnabled;
     document.getElementById('overlayToggle').checked = state.globalConfig.overlayEnabled;
     document.getElementById('autoStartToggle').checked = state.globalConfig.autoStart || false;
+    document.getElementById('idlePauseToggle').checked = state.globalConfig.idlePauseEnabled || false;
 
     const tabList = document.getElementById('tabList');
     
@@ -132,7 +133,8 @@ async function init() {
           defaultInterval: globalInterval,
           fullscreenEnabled: document.getElementById('fullscreenToggle').checked,
           overlayEnabled: document.getElementById('overlayToggle').checked,
-          autoStart: document.getElementById('autoStartToggle').checked
+          autoStart: document.getElementById('autoStartToggle').checked,
+          idlePauseEnabled: document.getElementById('idlePauseToggle').checked
         };
         
         await chrome.runtime.sendMessage({ type: 'UPDATE_CONFIG', config: newGlobal, tabsConfig: newTabs })
