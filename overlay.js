@@ -74,14 +74,15 @@
     if (msg.type === 'COUNTDOWN') {
       const timer = document.getElementById('kiosk-timer');
       const nextLabel = document.getElementById('kiosk-next-label');
+      const pauseBtn = document.getElementById('kiosk-pause-toggle');
+      
       if (timer) timer.innerText = msg.remaining;
       if (nextLabel && msg.nextTitle) nextLabel.innerText = "Next: " + msg.nextTitle;
-    } else if (msg.type === 'HIDE_OVERLAY') {
-      const overlay = document.getElementById('kiosk-tab-overlay');
-      if (overlay) overlay.style.display = 'none';
-    } else if (msg.type === 'SHOW_OVERLAY') {
-      const overlay = document.getElementById('kiosk-tab-overlay');
-      if (overlay) overlay.style.display = 'flex';
+      
+      // Update pause/play button to match current state
+      if (pauseBtn && msg.status) {
+        pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
+      }
     }
   });
 

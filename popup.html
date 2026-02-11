@@ -14,11 +14,65 @@
     label { display: block; font-size: 12px; color: #666; margin-bottom: 4px; }
     input[type="number"] { width: 100%; padding: 6px; box-sizing: border-box; border: 1px solid #ddd; border-radius: 4px; }
     .tab-item { font-size: 12px; border-top: 1px solid #eee; padding: 8px 0; display: flex; align-items: center; justify-content: space-between; }
+    .tab-item.current-tab { background: #e8f5e9; border-left: 3px solid #4CAF50; padding-left: 8px; }
     .tab-info { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; margin-right: 10px; }
     .checkbox-label { display: flex; align-items: center; gap: 5px; cursor: pointer; font-size: 13px; color: #333; }
+    .status-banner { 
+      padding: 8px 12px; 
+      border-radius: 6px; 
+      margin-bottom: 15px; 
+      font-size: 13px; 
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .status-banner.idle { background: #ffebee; color: #c62828; }
+    .status-banner.running { background: #e8f5e9; color: #2e7d32; }
+    .status-banner.paused { background: #fff3e0; color: #f57c00; }
+    .status-dot { 
+      width: 8px; 
+      height: 8px; 
+      border-radius: 50%; 
+      display: inline-block;
+    }
+    .status-banner.idle .status-dot { background: #f44336; }
+    .status-banner.running .status-dot { background: #4CAF50; animation: pulse 2s infinite; }
+    .status-banner.paused .status-dot { background: #FFC107; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    .error-message {
+      padding: 8px 12px;
+      background: #ffebee;
+      color: #c62828;
+      border-radius: 6px;
+      margin-bottom: 15px;
+      font-size: 12px;
+      display: none;
+    }
+    .error-message.show {
+      display: block;
+      animation: slideIn 0.3s ease-out;
+    }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    input[type="number"]:invalid {
+      border-color: #f44336;
+    }
   </style>
 </head>
 <body>
+  <div id="errorMessage" class="error-message"></div>
+
+  <div id="statusBanner" class="status-banner idle">
+    <span class="status-dot"></span>
+    <span id="statusText">Rotation Stopped</span>
+  </div>
+
   <div class="controls">
     <button id="startBtn" class="btn-start">Start</button>
     <button id="pauseBtn" class="btn-pause">Pause</button>
@@ -29,7 +83,7 @@
     <h2>Global Settings</h2>
     <div class="field">
       <label>Default Interval (seconds)</label>
-      <input type="number" id="globalInterval" value="10">
+      <input type="number" id="globalInterval" value="10" min="1" max="3600" required>
     </div>
     <div class="field">
       <label class="checkbox-label">
