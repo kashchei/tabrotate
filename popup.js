@@ -17,13 +17,13 @@ function updateStatusBanner(status) {
   // Add appropriate class and text
   if (status === 'running') {
     banner.classList.add('running');
-    statusText.textContent = '✓ Rotation Active';
+    statusText.textContent = 'Rotation Active';
   } else if (status === 'paused') {
     banner.classList.add('paused');
-    statusText.textContent = '⏸ Rotation Paused';
+    statusText.textContent = 'Rotation Paused';
   } else {
     banner.classList.add('idle');
-    statusText.textContent = '■ Rotation Stopped';
+    statusText.textContent = 'Rotation Stopped';
   }
 }
 
