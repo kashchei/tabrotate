@@ -37,7 +37,11 @@ function validateInterval(value) {
 
 async function init() {
   try {
-    const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' });
+    const state = await chrome.runtime.sendMessage({ type: 'GET_STATE' }).catch((err) => {
+      showError('Failed to connect to service worker: ' + err.message);
+      throw err;
+    });
+    
     const tabs = await chrome.tabs.query({ currentWindow: true });
 
     // Update status banner
@@ -88,7 +92,7 @@ async function init() {
       tabList.appendChild(div);
     });
 
-    const saveAll = () => {
+    const saveAll = async () => {
       try {
         const globalInterval = parseInt(document.getElementById('globalInterval').value);
         
@@ -131,7 +135,11 @@ async function init() {
           autoStart: document.getElementById('autoStartToggle').checked
         };
         
-        chrome.runtime.sendMessage({ type: 'UPDATE_CONFIG', config: newGlobal, tabsConfig: newTabs });
+        await chrome.runtime.sendMessage({ type: 'UPDATE_CONFIG', config: newGlobal, tabsConfig: newTabs })
+          .catch((err) => {
+            showError('Failed to save configuration: ' + err.message);
+            throw err;
+          });
       } catch (error) {
         showError('Error saving configuration: ' + error.message);
       }
@@ -139,23 +147,35 @@ async function init() {
 
     document.querySelectorAll('input').forEach(el => el.onchange = saveAll);
 
-    document.getElementById('startBtn').onclick = () => { 
-      saveAll(); 
-      chrome.runtime.sendMessage({ type: 'START' }, () => {
-        updateStatusBanner('running');
-      }); 
+    document.getElementById('startBtn').onclick = async () => { 
+      await saveAll(); 
+      chrome.runtime.sendMessage({ type: 'START' })
+        .then(() => {
+          updateStatusBanner('running');
+        })
+        .catch((err) => {
+          showError('Failed to start rotation: ' + err.message);
+        });
     };
     
     document.getElementById('pauseBtn').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'PAUSE' }, () => {
-        updateStatusBanner('paused');
-      });
+      chrome.runtime.sendMessage({ type: 'PAUSE' })
+        .then(() => {
+          updateStatusBanner('paused');
+        })
+        .catch((err) => {
+          showError('Failed to pause rotation: ' + err.message);
+        });
     };
     
     document.getElementById('stopBtn').onclick = () => {
-      chrome.runtime.sendMessage({ type: 'STOP' }, () => {
-        updateStatusBanner('idle');
-      });
+      chrome.runtime.sendMessage({ type: 'STOP' })
+        .then(() => {
+          updateStatusBanner('idle');
+        })
+        .catch((err) => {
+          showError('Failed to stop rotation: ' + err.message);
+        });
     };
   } catch (error) {
     showError('Failed to initialize: ' + error.message);

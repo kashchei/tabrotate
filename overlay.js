@@ -70,7 +70,8 @@
   `;
   document.body.appendChild(container);
 
-  chrome.runtime.onMessage.addListener((msg) => {
+  // Message listener for countdown updates
+  const messageListener = (msg) => {
     if (msg.type === 'COUNTDOWN') {
       const timer = document.getElementById('kiosk-timer');
       const nextLabel = document.getElementById('kiosk-next-label');
@@ -83,17 +84,46 @@
       if (pauseBtn && msg.status) {
         pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
       }
+    } else if (msg.type === 'HIDE_OVERLAY') {
+      const overlay = document.getElementById('kiosk-tab-overlay');
+      if (overlay) overlay.remove();
+      chrome.runtime.onMessage.removeListener(messageListener);
     }
-  });
-
-  document.getElementById('kiosk-pause-toggle').onclick = () => {
-    chrome.runtime.sendMessage({ type: 'GET_STATE' }, (state) => {
-      const isCurrentlyRunning = state.status === 'running';
-      chrome.runtime.sendMessage({ type: isCurrentlyRunning ? 'PAUSE' : 'START' });
-      document.getElementById('kiosk-pause-toggle').innerText = isCurrentlyRunning ? '▶' : '⏸';
-    });
   };
 
-  document.getElementById('kiosk-next').onclick = () => chrome.runtime.sendMessage({ type: 'NAV_NEXT' });
-  document.getElementById('kiosk-prev').onclick = () => chrome.runtime.sendMessage({ type: 'NAV_PREV' });
+  chrome.runtime.onMessage.addListener(messageListener);
+
+  // Pause/Play toggle with proper state synchronization
+  const pauseToggle = document.getElementById('kiosk-pause-toggle');
+  if (pauseToggle) {
+    pauseToggle.onclick = () => {
+      // Get current button state to determine action
+      const currentButton = pauseToggle.innerText;
+      const shouldStart = (currentButton === '▶');
+      
+      chrome.runtime.sendMessage({ type: shouldStart ? 'START' : 'PAUSE' })
+        .then(() => {
+          pauseToggle.innerText = shouldStart ? '⏸' : '▶';
+        })
+        .catch((err) => {
+          console.error('Failed to toggle rotation:', err);
+        });
+    };
+  }
+
+  const nextBtn = document.getElementById('kiosk-next');
+  if (nextBtn) {
+    nextBtn.onclick = () => {
+      chrome.runtime.sendMessage({ type: 'NAV_NEXT' })
+        .catch((err) => console.error('Failed to navigate next:', err));
+    };
+  }
+
+  const prevBtn = document.getElementById('kiosk-prev');
+  if (prevBtn) {
+    prevBtn.onclick = () => {
+      chrome.runtime.sendMessage({ type: 'NAV_PREV' })
+        .catch((err) => console.error('Failed to navigate prev:', err));
+    };
+  }
 })();
