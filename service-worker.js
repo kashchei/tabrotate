@@ -1,5 +1,6 @@
 let rotationTimer = null;
 let refreshRegistry = {}; 
+let navigating = false; // Mutex to prevent concurrent navigation
 
 let state = {
   status: 'stopped', 
@@ -13,10 +14,20 @@ let state = {
   }
 };
 
+// Helper function to ensure timer cleanup
+function clearRotationTimer() {
+  if (rotationTimer !== null) {
+    clearTimeout(rotationTimer);
+    rotationTimer = null;
+  }
+}
+
 async function broadcastToAllTabs(message) {
   const tabs = await chrome.tabs.query({});
   tabs.forEach(tab => {
-    chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+    chrome.tabs.sendMessage(tab.id, message).catch((err) => {
+      console.log(`Failed to send message to tab ${tab.id}:`, err.message);
+    });
   });
 }
 
@@ -63,11 +74,21 @@ function updateIcon(color) {
 }
 
 async function navigate(direction) {
+  // Prevent concurrent navigation calls
+  if (navigating) {
+    console.log("Navigation already in progress, skipping");
+    return;
+  }
+  
+  navigating = true;
   try {
     const tabs = await chrome.tabs.query({ currentWindow: true });
     const activeTabs = tabs.filter(t => (state.tabsConfig[t.id]?.included !== false));
 
-    if (activeTabs.length === 0) return;
+    if (activeTabs.length === 0) {
+      navigating = false;
+      return;
+    }
 
     if (direction === 'next') {
       state.currentIndex = (state.currentIndex + 1) % activeTabs.length;
@@ -78,18 +99,13 @@ async function navigate(direction) {
     const currentTab = activeTabs[state.currentIndex];
     const tabExists = await chrome.tabs.get(currentTab.id).catch(() => null);
     if (!tabExists) {
-      state.currentIndex = 0; 
+      state.currentIndex = 0;
+      navigating = false;
+      // Tab no longer exists, retry rotation with reset index
       return rotate();
     }
 
     await chrome.tabs.update(currentTab.id, { active: true });
-    
-    setTimeout(async () => {
-      const updatedTab = await chrome.tabs.get(currentTab.id).catch(() => null);
-      if (updatedTab && (updatedTab.title.includes("not found") || updatedTab.title.includes("Error") || updatedTab.title.includes("timed out"))) {
-        rotate();
-      }
-    }, 2000);
 
     if (state.globalConfig.overlayEnabled) {
       setTimeout(() => ensureOverlay(currentTab.id), 100);
@@ -97,12 +113,20 @@ async function navigate(direction) {
 
     const nextIndex = (state.currentIndex + 1) % activeTabs.length;
     const nextTab = activeTabs[nextIndex];
-    const now = Date.now();
-    const lastRefresh = refreshRegistry[nextTab.id] || 0;
-
-    if (state.tabsConfig[nextTab.id]?.refreshBefore && (now - lastRefresh > 30000)) {
-      chrome.tabs.reload(nextTab.id).catch(() => {});
-      refreshRegistry[nextTab.id] = now;
+    
+    // Verify nextTab still exists before refreshing
+    if (nextTab) {
+      const nextTabExists = await chrome.tabs.get(nextTab.id).catch(() => null);
+      if (nextTabExists) {
+        const now = Date.now();
+        const lastRefresh = refreshRegistry[nextTab.id] || 0;
+        if (state.tabsConfig[nextTab.id]?.refreshBefore && (now - lastRefresh > 30000)) {
+          chrome.tabs.reload(nextTab.id).catch((err) => {
+            console.log(`Failed to reload tab ${nextTab.id}:`, err.message);
+          });
+          refreshRegistry[nextTab.id] = now;
+        }
+      }
     }
 
     if (state.globalConfig.fullscreenEnabled) {
@@ -114,9 +138,11 @@ async function navigate(direction) {
     if (state.status === 'running') {
       startTimer(state.tabsConfig[currentTab.id]?.interval || state.globalConfig.defaultInterval);
     }
-    saveState();
+    await saveState();
   } catch (e) {
     console.error("Navigation error:", e);
+  } finally {
+    navigating = false;
   }
 }
 
@@ -134,7 +160,8 @@ function ensureOverlay(tabId) {
 }
 
 async function startTimer(seconds) {
-  clearTimeout(rotationTimer);
+  clearRotationTimer();
+  
   let remaining = seconds;
   
   const tabs = await chrome.tabs.query({ currentWindow: true });
@@ -143,7 +170,10 @@ async function startTimer(seconds) {
   const nextTitle = activeTabs[nextIdx]?.title || "Next Tab";
 
   const tick = () => {
-    if (state.status !== 'running') return;
+    if (state.status !== 'running') {
+      clearRotationTimer();
+      return;
+    }
     
     if (state.globalConfig.overlayEnabled) {
       chrome.tabs.query({ active: true, currentWindow: true }, (currentTabs) => {
@@ -151,8 +181,12 @@ async function startTimer(seconds) {
           chrome.tabs.sendMessage(currentTabs[0].id, { 
             type: 'COUNTDOWN', 
             remaining,
-            nextTitle: nextTitle 
-          }).catch(() => {
+            nextTitle: nextTitle,
+            // Include status to keep overlay pause/play button synchronized
+            // This prevents race conditions where overlay state doesn't match server state
+            status: state.status
+          }).catch((err) => {
+            console.log(`Failed to send countdown to tab:`, err.message);
             ensureOverlay(currentTabs[0].id);
           });
         }
@@ -176,35 +210,44 @@ chrome.tabs.onActivated.addListener(activeInfo => {
 });
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
-  if (message.type === 'START') {
-    state.status = 'running';
-    updateIcon('green');
-    broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
-    rotate();
-  } else if (message.type === 'PAUSE') {
-    state.status = 'paused';
-    updateIcon('yellow');
-    clearTimeout(rotationTimer);
-  } else if (message.type === 'STOP') {
-    state.status = 'stopped';
-    updateIcon('red');
-    clearTimeout(rotationTimer);
-    broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
-  } else if (message.type === 'NAV_NEXT') {
-    navigate('next');
-  } else if (message.type === 'NAV_PREV') {
-    navigate('prev');
-  } else if (message.type === 'UPDATE_CONFIG') {
-    state.globalConfig = message.config;
-    state.tabsConfig = message.tabsConfig;
-    if (!message.config.overlayEnabled) {
-      broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
-    } else if (state.status === 'running') {
-      broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
+  (async () => {
+    try {
+      if (message.type === 'START') {
+        state.status = 'running';
+        updateIcon('green');
+        await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
+        await rotate();
+      } else if (message.type === 'PAUSE') {
+        state.status = 'paused';
+        updateIcon('yellow');
+        clearRotationTimer();
+      } else if (message.type === 'STOP') {
+        state.status = 'stopped';
+        updateIcon('red');
+        clearRotationTimer();
+        await broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
+      } else if (message.type === 'NAV_NEXT') {
+        await navigate('next');
+      } else if (message.type === 'NAV_PREV') {
+        await navigate('prev');
+      } else if (message.type === 'UPDATE_CONFIG') {
+        state.globalConfig = message.config;
+        state.tabsConfig = message.tabsConfig;
+        if (!message.config.overlayEnabled) {
+          await broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
+        } else if (state.status === 'running') {
+          await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
+        }
+      } else if (message.type === 'GET_STATE') {
+        sendResponse(state);
+        return; // Don't save state for read-only operation
+      }
+      await saveState();
+      sendResponse({ success: true });
+    } catch (error) {
+      console.error('Message handler error:', error);
+      sendResponse({ success: false, error: error.message });
     }
-  } else if (message.type === 'GET_STATE') {
-    sendResponse(state);
-  }
-  saveState();
-  return true;
+  })();
+  return true; // Keep message channel open for async response
 });
