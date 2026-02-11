@@ -70,6 +70,9 @@
   `;
   document.body.appendChild(container);
 
+  // Track overlay state locally for reliable pause/play toggle
+  let overlayState = 'running';
+
   // Message listener for countdown updates
   const messageListener = (msg) => {
     if (msg.type === 'COUNTDOWN') {
@@ -80,8 +83,9 @@
       if (timer) timer.innerText = msg.remaining;
       if (nextLabel && msg.nextTitle) nextLabel.innerText = "Next: " + msg.nextTitle;
       
-      // Update pause/play button to match current state
+      // Update pause/play button to match current state from server
       if (pauseBtn && msg.status) {
+        overlayState = msg.status; // Update local state
         pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
       }
     } else if (msg.type === 'HIDE_OVERLAY') {
@@ -95,14 +99,15 @@
 
   // Pause/Play toggle with proper state synchronization
   const pauseToggle = document.getElementById('kiosk-pause-toggle');
+  
   if (pauseToggle) {
     pauseToggle.onclick = () => {
-      // Get current button state to determine action
-      const currentButton = pauseToggle.innerText;
-      const shouldStart = (currentButton === '▶');
+      // Toggle based on local state
+      const shouldStart = (overlayState === 'paused');
       
       chrome.runtime.sendMessage({ type: shouldStart ? 'START' : 'PAUSE' })
         .then(() => {
+          overlayState = shouldStart ? 'running' : 'paused';
           pauseToggle.innerText = shouldStart ? '⏸' : '▶';
         })
         .catch((err) => {

@@ -14,6 +14,14 @@ let state = {
   }
 };
 
+// Helper function to ensure timer cleanup
+function clearRotationTimer() {
+  if (rotationTimer !== null) {
+    clearTimeout(rotationTimer);
+    rotationTimer = null;
+  }
+}
+
 async function broadcastToAllTabs(message) {
   const tabs = await chrome.tabs.query({});
   tabs.forEach(tab => {
@@ -93,7 +101,8 @@ async function navigate(direction) {
     if (!tabExists) {
       state.currentIndex = 0;
       navigating = false;
-      return;
+      // Tab no longer exists, retry rotation with reset index
+      return rotate();
     }
 
     await chrome.tabs.update(currentTab.id, { active: true });
@@ -151,8 +160,7 @@ function ensureOverlay(tabId) {
 }
 
 async function startTimer(seconds) {
-  clearTimeout(rotationTimer);
-  rotationTimer = null;
+  clearRotationTimer();
   
   let remaining = seconds;
   
@@ -163,8 +171,7 @@ async function startTimer(seconds) {
 
   const tick = () => {
     if (state.status !== 'running') {
-      clearTimeout(rotationTimer);
-      rotationTimer = null;
+      clearRotationTimer();
       return;
     }
     
@@ -211,13 +218,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
       } else if (message.type === 'PAUSE') {
         state.status = 'paused';
         updateIcon('yellow');
-        clearTimeout(rotationTimer);
-        rotationTimer = null;
+        clearRotationTimer();
       } else if (message.type === 'STOP') {
         state.status = 'stopped';
         updateIcon('red');
-        clearTimeout(rotationTimer);
-        rotationTimer = null;
+        clearRotationTimer();
         await broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
       } else if (message.type === 'NAV_NEXT') {
         await navigate('next');
