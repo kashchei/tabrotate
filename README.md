@@ -309,6 +309,17 @@ chrome.runtime.sendMessage({
 - Priority rotation pattern not yet implemented
 - Idle detection coming soon
 
+## Recently Fixed (v2.0.1)
+
+- ✅ Race conditions in tab navigation
+- ✅ Memory leaks from timers
+- ✅ State synchronization issues
+- ✅ Duplicate event listeners
+- ✅ Silent error failures
+- ✅ Async/await handling bugs
+
+For details, see [STABILITY_FIXES.md](STABILITY_FIXES.md)
+
 ## Roadmap
 
 - [ ] Media playback detection
@@ -342,7 +353,27 @@ For issues, questions, or suggestions:
 
 ## Changelog
 
-### v2.0.0 (Current)
+### v2.0.1 (Current - Stability Release)
+- **Critical Stability Fixes**
+  - Fixed race condition in tab navigation preventing concurrent calls
+  - Fixed async/await handling in message handlers
+  - Fixed timer memory leaks with proper cleanup
+  - Fixed duplicate event listeners in overlay
+  - Fixed state synchronization between popup and overlay
+- **Error Handling Improvements**
+  - Added comprehensive error logging for debugging
+  - Added user-friendly error messages in popup
+  - All message passing now has proper error handlers
+- **Code Quality**
+  - Extracted helper function for timer cleanup
+  - Added inline documentation for critical sections
+  - All code passes security scan (CodeQL)
+- **Documentation**
+  - Added STABILITY_FIXES.md with detailed fix descriptions
+  - Added TESTING_GUIDE.md with 10 comprehensive test cases
+  - Added SUMMARY.md with complete overview
+
+### v2.0.0
 - Complete rewrite with Manifest V3
 - New UI with statistics
 - Multiple rotation patterns
