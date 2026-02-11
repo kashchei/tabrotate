@@ -2,6 +2,8 @@ let rotationTimer = null;
 let refreshRegistry = {}; 
 let navigating = false; // Mutex to prevent concurrent navigation
 
+let idlePaused = false; // Track whether rotation is paused due to user activity
+
 let state = {
   status: 'stopped', 
   currentIndex: 0,
@@ -10,7 +12,8 @@ let state = {
     defaultInterval: 10,
     fullscreenEnabled: false,
     overlayEnabled: true,
-    autoStart: false // New feature flag
+    autoStart: false, // New feature flag
+    idlePauseEnabled: false // Pause rotation when user is active
   }
 };
 
@@ -174,6 +177,12 @@ async function startTimer(seconds) {
       clearRotationTimer();
       return;
     }
+
+    // If idle-paused, stop ticking — IDLE_RESUME will call rotate() to restart
+    if (idlePaused) {
+      clearRotationTimer();
+      return;
+    }
     
     if (state.globalConfig.overlayEnabled) {
       chrome.tabs.query({ active: true, currentWindow: true }, (currentTabs) => {
@@ -184,7 +193,8 @@ async function startTimer(seconds) {
             nextTitle: nextTitle,
             // Include status to keep overlay pause/play button synchronized
             // This prevents race conditions where overlay state doesn't match server state
-            status: state.status
+            status: state.status,
+            idlePaused: idlePaused
           }).catch((err) => {
             console.log(`Failed to send countdown to tab:`, err.message);
             ensureOverlay(currentTabs[0].id);
@@ -214,15 +224,18 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     try {
       if (message.type === 'START') {
         state.status = 'running';
+        idlePaused = false;
         updateIcon('green');
         await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
         await rotate();
       } else if (message.type === 'PAUSE') {
         state.status = 'paused';
+        idlePaused = false;
         updateIcon('yellow');
         clearRotationTimer();
       } else if (message.type === 'STOP') {
         state.status = 'stopped';
+        idlePaused = false;
         updateIcon('red');
         clearRotationTimer();
         await broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
@@ -230,6 +243,26 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         await navigate('next');
       } else if (message.type === 'NAV_PREV') {
         await navigate('prev');
+      } else if (message.type === 'IDLE_PAUSE') {
+        // User is active — pause timer without changing state.status
+        if (state.status === 'running' && state.globalConfig.idlePauseEnabled && !idlePaused) {
+          idlePaused = true;
+          clearRotationTimer();
+          updateIcon('yellow');
+          await broadcastToAllTabs({ type: 'IDLE_PAUSE_STATE', idlePaused: true });
+        }
+        sendResponse({ success: true });
+        return; // Don't save state for transient idle pause
+      } else if (message.type === 'IDLE_RESUME') {
+        // User went idle — resume timer if we had idle-paused
+        if (state.status === 'running' && idlePaused) {
+          idlePaused = false;
+          updateIcon('green');
+          await broadcastToAllTabs({ type: 'IDLE_PAUSE_STATE', idlePaused: false });
+          await rotate();
+        }
+        sendResponse({ success: true });
+        return; // Don't save state for transient idle resume
       } else if (message.type === 'UPDATE_CONFIG') {
         state.globalConfig = message.config;
         state.tabsConfig = message.tabsConfig;
@@ -238,8 +271,12 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         } else if (state.status === 'running') {
           await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
         }
+        // Notify overlays of idle pause config change
+        await broadcastToAllTabs({ type: 'CONFIG_UPDATED', idlePauseEnabled: message.config.idlePauseEnabled || false });
+        // Reset idle pause state when config changes
+        idlePaused = false;
       } else if (message.type === 'GET_STATE') {
-        sendResponse(state);
+        sendResponse({ ...state, idlePaused });
         return; // Don't save state for read-only operation
       }
       await saveState();

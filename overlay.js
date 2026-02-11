@@ -73,8 +73,54 @@
   // Track overlay state locally for reliable pause/play toggle
   // Will be synchronized with actual state when first COUNTDOWN message arrives
   let overlayState = 'running';
+
+  // --- User Activity Detection for Idle Pause ---
+  let idlePauseEnabled = false;
+  let idleTimeout = null;
+  let isIdlePaused = false;
+  let lastActivityNotification = 0;
+  const IDLE_DELAY = 5000; // 5 seconds of inactivity before resuming
+  const ACTIVITY_THROTTLE = 500; // Minimum ms between activity notifications
+  const activityEvents = ['mousemove', 'keydown', 'mousedown', 'scroll', 'touchstart'];
+
+  function onUserActivity(e) {
+    if (!idlePauseEnabled) return;
+    // Ignore events originating from the overlay itself
+    const overlay = document.getElementById('kiosk-tab-overlay');
+    if (overlay && overlay.contains(e.target)) return;
+
+    const now = Date.now();
+
+    // Clear any pending idle-resume timeout
+    if (idleTimeout !== null) {
+      clearTimeout(idleTimeout);
+      idleTimeout = null;
+    }
+
+    // Throttle: only send IDLE_PAUSE if enough time has passed since last notification
+    if (!isIdlePaused && now - lastActivityNotification >= ACTIVITY_THROTTLE) {
+      isIdlePaused = true;
+      lastActivityNotification = now;
+      chrome.runtime.sendMessage({ type: 'IDLE_PAUSE' }).catch(() => {});
+    }
+
+    // Set idle-resume timeout: after 5s of inactivity, resume rotation
+    idleTimeout = setTimeout(() => {
+      if (isIdlePaused) {
+        isIdlePaused = false;
+        chrome.runtime.sendMessage({ type: 'IDLE_RESUME' }).catch(() => {});
+      }
+      idleTimeout = null;
+    }, IDLE_DELAY);
+  }
+
+  // Listen for user activity events on the document
+  activityEvents.forEach(eventName => {
+    document.addEventListener(eventName, onUserActivity, { passive: true, capture: true });
+  });
+  // --- End User Activity Detection ---
   
-  // Initialize button state from service worker
+  // Initialize button state and idle pause setting from service worker
   chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
     if (state && state.status) {
       overlayState = state.status;
@@ -82,6 +128,10 @@
       if (pauseBtn) {
         pauseBtn.innerText = state.status === 'running' ? '⏸' : '▶';
       }
+    }
+    if (state && state.globalConfig) {
+      idlePauseEnabled = state.globalConfig.idlePauseEnabled || false;
+      isIdlePaused = state.idlePaused || false;
     }
   }).catch((err) => {
     console.log('Failed to get initial state:', err.message);
@@ -102,10 +152,37 @@
         overlayState = msg.status; // Update local state
         pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
       }
+    } else if (msg.type === 'IDLE_PAUSE_STATE') {
+      isIdlePaused = msg.idlePaused;
+      // Update overlay to show idle-paused indicator
+      const timer = document.getElementById('kiosk-timer');
+      const nextLabel = document.getElementById('kiosk-next-label');
+      if (msg.idlePaused) {
+        if (timer) timer.innerText = '⏸';
+        if (nextLabel) nextLabel.innerText = 'Paused — user active';
+      }
+    } else if (msg.type === 'CONFIG_UPDATED') {
+      idlePauseEnabled = msg.idlePauseEnabled || false;
+      // If idle pause was disabled, reset idle state
+      if (!idlePauseEnabled && isIdlePaused) {
+        isIdlePaused = false;
+        if (idleTimeout !== null) {
+          clearTimeout(idleTimeout);
+          idleTimeout = null;
+        }
+      }
     } else if (msg.type === 'HIDE_OVERLAY') {
       const overlay = document.getElementById('kiosk-tab-overlay');
       if (overlay) overlay.remove();
       chrome.runtime.onMessage.removeListener(messageListener);
+      // Clean up activity listeners
+      activityEvents.forEach(eventName => {
+        document.removeEventListener(eventName, onUserActivity, { capture: true });
+      });
+      if (idleTimeout !== null) {
+        clearTimeout(idleTimeout);
+        idleTimeout = null;
+      }
     }
   };
 
