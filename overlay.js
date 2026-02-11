@@ -160,6 +160,10 @@
       if (msg.idlePaused) {
         if (timer) timer.innerText = '⏸';
         if (nextLabel) nextLabel.innerText = 'Paused — user active';
+      } else {
+        // Restore defaults; the next COUNTDOWN message will update with actual values
+        if (timer) timer.innerText = '--';
+        if (nextLabel) nextLabel.innerText = 'Resuming...';
       }
     } else if (msg.type === 'CONFIG_UPDATED') {
       idlePauseEnabled = msg.idlePauseEnabled || false;
