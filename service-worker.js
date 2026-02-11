@@ -13,11 +13,19 @@ let state = {
   }
 };
 
+async function broadcastToAllTabs(message) {
+  const tabs = await chrome.tabs.query({});
+  tabs.forEach(tab => {
+    chrome.tabs.sendMessage(tab.id, message).catch(() => {});
+  });
+}
+
 chrome.runtime.onStartup.addListener(async () => {
   await loadState();
   if (state.globalConfig.autoStart) {
     state.status = 'running';
     updateIcon('green');
+    broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
     rotate();
   }
 });
@@ -171,6 +179,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type === 'START') {
     state.status = 'running';
     updateIcon('green');
+    broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
     rotate();
   } else if (message.type === 'PAUSE') {
     state.status = 'paused';
@@ -180,6 +189,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     state.status = 'stopped';
     updateIcon('red');
     clearTimeout(rotationTimer);
+    broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
   } else if (message.type === 'NAV_NEXT') {
     navigate('next');
   } else if (message.type === 'NAV_PREV') {
@@ -187,6 +197,11 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   } else if (message.type === 'UPDATE_CONFIG') {
     state.globalConfig = message.config;
     state.tabsConfig = message.tabsConfig;
+    if (!message.config.overlayEnabled) {
+      broadcastToAllTabs({ type: 'HIDE_OVERLAY' });
+    } else if (state.status === 'running') {
+      broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
+    }
   } else if (message.type === 'GET_STATE') {
     sendResponse(state);
   }

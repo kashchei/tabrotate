@@ -76,6 +76,12 @@
       const nextLabel = document.getElementById('kiosk-next-label');
       if (timer) timer.innerText = msg.remaining;
       if (nextLabel && msg.nextTitle) nextLabel.innerText = "Next: " + msg.nextTitle;
+    } else if (msg.type === 'HIDE_OVERLAY') {
+      const overlay = document.getElementById('kiosk-tab-overlay');
+      if (overlay) overlay.style.display = 'none';
+    } else if (msg.type === 'SHOW_OVERLAY') {
+      const overlay = document.getElementById('kiosk-tab-overlay');
+      if (overlay) overlay.style.display = 'flex';
     }
   });
 
