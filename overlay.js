@@ -71,7 +71,21 @@
   document.body.appendChild(container);
 
   // Track overlay state locally for reliable pause/play toggle
+  // Will be synchronized with actual state when first COUNTDOWN message arrives
   let overlayState = 'running';
+  
+  // Initialize button state from service worker
+  chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
+    if (state && state.status) {
+      overlayState = state.status;
+      const pauseBtn = document.getElementById('kiosk-pause-toggle');
+      if (pauseBtn) {
+        pauseBtn.innerText = state.status === 'running' ? '⏸' : '▶';
+      }
+    }
+  }).catch((err) => {
+    console.log('Failed to get initial state:', err.message);
+  });
 
   // Message listener for countdown updates
   const messageListener = (msg) => {

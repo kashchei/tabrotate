@@ -182,6 +182,8 @@ async function startTimer(seconds) {
             type: 'COUNTDOWN', 
             remaining,
             nextTitle: nextTitle,
+            // Include status to keep overlay pause/play button synchronized
+            // This prevents race conditions where overlay state doesn't match server state
             status: state.status
           }).catch((err) => {
             console.log(`Failed to send countdown to tab:`, err.message);
