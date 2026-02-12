@@ -152,7 +152,7 @@ async function rotate() {
 }
 
 function ensureOverlay(tabId) {
-  if (!state.globalConfig.overlayEnabled) return;
+  if (!state.globalConfig.overlayEnabled || state.status === 'stopped') return;
   chrome.scripting.executeScript({
     target: { tabId: tabId },
     files: ['overlay.js']

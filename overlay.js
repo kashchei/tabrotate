@@ -77,6 +77,11 @@
   // Initialize button state from service worker
   chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
     if (state && state.status) {
+      if (state.status === 'stopped') {
+        const overlay = document.getElementById('kiosk-tab-overlay');
+        if (overlay) overlay.remove();
+        return;
+      }
       overlayState = state.status;
       const pauseBtn = document.getElementById('kiosk-pause-toggle');
       if (pauseBtn) {
