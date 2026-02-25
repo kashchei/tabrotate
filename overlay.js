@@ -78,6 +78,8 @@
   function removeOverlay() {
     const overlay = document.getElementById('kiosk-tab-overlay');
     if (overlay) overlay.remove();
+    const style = document.getElementById('kiosk-overlay-style');
+    if (style) style.remove();
     chrome.runtime.onMessage.removeListener(messageListener);
     clearInterval(stateCheckInterval);
   }

@@ -68,6 +68,13 @@ async function init() {
     const activeTabs = tabs.filter(t => (state.tabsConfig[t.id]?.included !== false));
     const currentTabInRotation = activeTabs[state.currentIndex];
     
+    // Escape HTML to prevent XSS from malicious tab titles
+    function escapeHtml(str) {
+      const div = document.createElement('div');
+      div.textContent = str;
+      return div.innerHTML;
+    }
+    
     tabs.forEach(tab => {
       const config = state.tabsConfig[tab.id] || { interval: '', refreshBefore: false, included: true };
       const div = document.createElement('div');
@@ -78,8 +85,9 @@ async function init() {
         div.classList.add('current-tab');
       }
       
+      const safeTitle = escapeHtml(tab.title);
       div.innerHTML = `
-        <div class="tab-info" title="${tab.title}">${tab.title}</div>
+        <div class="tab-info" title="${safeTitle}">${safeTitle}</div>
         <div style="display: flex; gap: 4px; align-items: center;">
           <input type="number" placeholder="Sec" style="width: 45px;" value="${config.interval || ''}" 
                  id="int-${tab.id}" min="1" max="3600">
