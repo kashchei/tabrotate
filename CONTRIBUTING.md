@@ -198,7 +198,6 @@ async function fetchData() {
 1. **Create test checklist**
 2. **Test in Chrome and Edge**
 3. **Test with different tab counts**
-4. **Test keyboard shortcuts**
 5. **Check DevTools for errors**
 
 ### Browser Compatibility
@@ -215,7 +214,6 @@ async function fetchData() {
 Update `README.md` when:
 - Adding new features
 - Changing configuration options
-- Updating keyboard shortcuts
 - Changing installation instructions
 
 ### Inline Comments

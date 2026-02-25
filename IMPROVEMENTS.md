@@ -7,7 +7,7 @@
 2. **State Machine**: Clean three-state model (IDLE, ROTATING, PAUSED)
 3. **Error Handling**: Comprehensive try-catch blocks throughout
 4. **Resource Management**: Proper cleanup on suspend and tab removal
-5. **User Experience**: Overlay countdown, keyboard shortcuts, persistent state
+5. **User Experience**: Overlay countdown, persistent state
 
 ### 🔍 Code Quality Analysis
 
