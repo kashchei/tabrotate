@@ -1,28 +1,26 @@
 # Tab Rotator Pro
 
-A powerful Chrome extension for automatic tab rotation with advanced features and smart controls.
+A Chrome extension for automatic tab rotation with per-tab controls and an on-page overlay countdown.
 
 ## Features
 
 ### Core Features
-- **Automatic Tab Rotation**: Continuously rotate through tabs at customizable intervals
-- **Multiple Rotation Patterns**: Sequential, Random, or Priority-based rotation
-- **Smart Detection**: Pause rotation during media playback or browser inactivity
-- **Selective Tab Control**: Choose specific tabs to rotate or exclude certain URLs
-
-### Advanced Features
-- **Statistics Tracking**: Monitor rotations performed and time spent per tab
-- **Keyboard Shortcuts**: Quick toggle and manual rotation controls
-- **Persistent Configuration**: All settings saved and synced across devices
-- **Debug Mode**: Enable logging for troubleshooting
-- **Flexible Exclusion**: Exclude tabs by URL pattern (regex support)
+- **Automatic Tab Rotation**: Continuously rotate through tabs in sequential order at configurable intervals
+- **Per-Tab Control**: Include or exclude individual tabs from rotation, set per-tab interval overrides, and optionally refresh tabs before they are shown
+- **Fullscreen Mode**: Automatically enter fullscreen during rotation
+- **Auto-Start**: Optionally start rotation automatically when the browser launches
 
 ### UI Features
-- **Modern Popup Interface**: Clean, intuitive design with real-time status
-- **Status Indicators**: Visual feedback on rotation status
-- **Badge Display**: Shows current tab index during rotation
-- **Advanced Settings**: Power user options with collapsible sections
-- **Statistics Modal**: View detailed rotation statistics
+- **Popup Interface**: Clean design with Start/Pause/Stop controls and real-time status
+- **Status Indicators**: Color-coded extension icon (green/yellow/red) and an animated status banner in the popup
+- **Current Tab Highlighting**: The active tab in the rotation is highlighted in the popup tab list
+- **Overlay Countdown**: An on-page overlay shows the countdown timer, next tab title, and prev/next/pause controls
+- **Input Validation**: Interval inputs are validated (1–3600 seconds) with visual feedback
+- **Error Notifications**: Toast-style error messages for configuration and connection issues
+
+### Keyboard Shortcuts
+- **Ctrl+Shift+R** (Windows/Linux) or **Cmd+Shift+R** (Mac): Toggle rotation on/off
+- **Ctrl+Shift+N** (Windows/Linux) or **Cmd+Shift+N** (Mac): Rotate to next tab
 
 ## Installation
 
@@ -50,62 +48,47 @@ A powerful Chrome extension for automatic tab rotation with advanced features an
 ### Basic Usage
 
 1. Click the Tab Rotator Pro icon in your toolbar
-2. Click "Start Rotation" to begin rotating tabs
-3. Adjust the interval slider to change rotation speed
-4. Click "Stop Rotation" to stop
-
-### Keyboard Shortcuts
-
-- **Ctrl+Shift+R** (Windows/Linux) or **Cmd+Shift+R** (Mac): Toggle rotation
-- **Ctrl+Shift+N** (Windows/Linux) or **Cmd+Shift+N** (Mac): Manually rotate to next tab
-
-### Rotation Patterns
-
-- **Sequential**: Rotates through tabs in order (default)
-- **Random**: Randomly selects the next tab
-- **Priority**: (Coming soon) Rotates based on tab priority
-
-### Rotation Modes
-
-- **All Tabs**: Rotate through all tabs in the current window
-- **Selective**: Choose specific tabs to rotate
-- **Exclude Patterns**: Exclude tabs matching URL patterns
+2. Adjust the default interval and toggle settings as needed
+3. Use the per-tab checkboxes to include/exclude specific tabs or set per-tab intervals
+4. Click **Start** to begin rotating tabs
+5. Click **Pause** to temporarily pause or **Stop** to end rotation
 
 ### Settings
 
-#### Rotation Interval
-- Minimum: 1 second
-- Maximum: 60 seconds
-- Default: 5 seconds
+#### Global Settings
+- **Default Interval**: 1–3600 seconds (default: 10 seconds)
+- **Enable Fullscreen**: Enter fullscreen mode during rotation
+- **Show Overlay Countdown**: Display an on-page overlay with countdown and controls
+- **Start rotation on Start-up**: Automatically begin rotation when the browser starts
 
-#### Smart Detection
-- **Pause during media playback**: Automatically pauses when videos/audio are playing
-- **Detect idle**: (Coming soon) Pause when browser loses focus
-
-#### Advanced Settings
-- **Debug Mode**: Enable console logging
-- **Auto-start on browser launch**: Start rotation automatically
-- **Export Logs**: Download debug logs
-- **Import Config**: Import configuration from file
+#### Per-Tab Overrides
+Each tab in the current window is listed with:
+- **Interval override**: Set a custom interval (in seconds) for that tab
+- **Refresh before show**: Reload the tab in the background before switching to it
+- **Include**: Uncheck to exclude the tab from rotation
 
 ## Configuration
 
-### Manual Config File
-Settings are stored in `chrome.storage.sync` and include:
+Settings are stored in `chrome.storage.local` with the following structure:
 
 ```javascript
 {
-  "rotationInterval": 5000,           // milliseconds
-  "rotationPattern": "sequential",    // sequential, random, priority
-  "rotationMode": "all",              // all, selective, exclude
-  "excludedUrls": [],                 // array of regex patterns
-  "enabledTabs": [],                  // array of tab indices (selective mode)
-  "detectMedia": true,                // pause on media playback
-  "detectIdle": false,                // pause on idle
-  "statistics": {                     // usage statistics
-    "rotationsPerformed": 0,
-    "timeSpentPerTab": {},
-    "lastRotationTime": null
+  "kioskState": {
+    "status": "stopped",             // "running", "paused", or "stopped"
+    "currentIndex": 0,               // index of the current tab in the rotation
+    "tabsConfig": {                   // per-tab overrides, keyed by tab ID
+      "<tabId>": {
+        "interval": 15,              // per-tab interval in seconds (or null for default)
+        "refreshBefore": false,      // reload tab before showing
+        "included": true             // include tab in rotation
+      }
+    },
+    "globalConfig": {
+      "defaultInterval": 10,         // default interval in seconds
+      "fullscreenEnabled": false,    // enter fullscreen during rotation
+      "overlayEnabled": true,        // show on-page overlay countdown
+      "autoStart": false             // start rotation on browser launch
+    }
   }
 }
 ```
@@ -116,118 +99,92 @@ Settings are stored in `chrome.storage.sync` and include:
 
 ```
 tabrotate/
-├── manifest.json              # Extension manifest (Manifest V3)
-├── service-worker.js          # Background service worker (main logic)
-├── popup.html                 # Popup UI
-├── styles/
-│   └── popup.css             # Popup styles
-├── scripts/
-│   ├── popup.js              # Popup script
-│   └── utils.js              # Utility functions
-├── tests/
-│   └── unit-tests.js         # Unit tests
-├── logo.png                  # Extension icon
-└── README.md                 # This file
+├── manifest.json          # Extension manifest (Manifest V3)
+├── service-worker.js      # Background service worker (rotation logic and state)
+├── popup.html             # Popup UI and styles
+├── popup.js               # Popup script (settings, controls, tab list)
+├── overlay.js             # On-page overlay (countdown, navigation buttons)
+├── logo.png               # Extension icon
+└── README.md              # This file
 ```
 
-### Service Worker (Main Logic)
-- Handles tab rotation algorithm
-- Manages state and configuration
-- Processes messages from popup
-- Tracks statistics
-- Handles keyboard commands
+### Service Worker (`service-worker.js`)
+- Tab rotation algorithm (sequential, next/prev navigation)
+- State management and persistence (`chrome.storage.local`)
+- Message handling from popup and overlay
+- Keyboard command handling
+- Fullscreen management
+- Race-condition-safe navigation via a mutex
 
-### Popup Script
-- UI interactions
-- Message passing to service worker
-- Configuration management
-- Statistics display
+### Popup (`popup.html` / `popup.js`)
+- Start/Pause/Stop controls
+- Global settings (interval, fullscreen, overlay, auto-start)
+- Per-tab overrides (interval, refresh-before, include/exclude)
+- Status banner and current-tab highlighting
+- Input validation and error notifications
 
-### Utilities
-- URL pattern matching
-- Time formatting
-- Message and storage utilities
-- Error handling
-- Logging
+### Overlay (`overlay.js`)
+- Countdown timer display
+- Next tab title preview
+- Previous/Next/Pause-Play controls
+- State synchronization with the service worker
 
-## Configuration API
+## Message API
 
-### Messages to Service Worker
+The popup, overlay, and service worker communicate via `chrome.runtime.sendMessage`. The supported message types are:
 
 ```javascript
 // Start rotation
-chrome.runtime.sendMessage({
-  action: 'startRotation',
-  windowId: windowId,
-  tabIndices: [0, 1, 2, 3]
-});
+chrome.runtime.sendMessage({ type: 'START' });
+
+// Pause rotation
+chrome.runtime.sendMessage({ type: 'PAUSE' });
 
 // Stop rotation
-chrome.runtime.sendMessage({ action: 'stopRotation' });
+chrome.runtime.sendMessage({ type: 'STOP' });
 
-// Get status
-chrome.runtime.sendMessage({ action: 'getStatus' });
+// Navigate to next tab
+chrome.runtime.sendMessage({ type: 'NAV_NEXT' });
 
-// Set interval (milliseconds)
-chrome.runtime.sendMessage({
-  action: 'setInterval',
-  interval: 5000
-});
+// Navigate to previous tab
+chrome.runtime.sendMessage({ type: 'NAV_PREV' });
+
+// Get current state (returns state object via sendResponse)
+chrome.runtime.sendMessage({ type: 'GET_STATE' });
 
 // Update configuration
 chrome.runtime.sendMessage({
-  action: 'updateConfig',
+  type: 'UPDATE_CONFIG',
   config: {
-    detectMedia: true,
-    rotationPattern: 'sequential'
+    defaultInterval: 10,
+    fullscreenEnabled: false,
+    overlayEnabled: true,
+    autoStart: false
+  },
+  tabsConfig: {
+    "<tabId>": { interval: 15, refreshBefore: false, included: true }
   }
-});
-
-// Set rotation pattern
-chrome.runtime.sendMessage({
-  action: 'setRotationPattern',
-  pattern: 'random'
-});
-
-// Enable selective mode
-chrome.runtime.sendMessage({
-  action: 'enableSelectiveMode',
-  tabIndices: [0, 2, 3]
-});
-
-// Exclude URL
-chrome.runtime.sendMessage({
-  action: 'excludeUrl',
-  url: 'youtube\.com'
 });
 ```
 
 ## Testing
 
-### Run Unit Tests
-
-1. Open the extension popup
-2. Enable Debug Mode in Advanced Settings
-3. Open Developer Console (F12)
-4. Run tests:
-   ```javascript
-   // Load test file first
-   // Then run:
-   TestRunner.run();
-   ```
-
 ### Manual Testing Checklist
 
-- [ ] Start rotation
+- [ ] Start rotation with multiple tabs open
+- [ ] Pause and resume rotation
 - [ ] Stop rotation
-- [ ] Change interval
-- [ ] Change rotation pattern
-- [ ] Switch rotation mode
-- [ ] Exclude URLs
-- [ ] Enable selective mode
-- [ ] Check statistics
-- [ ] Verify keyboard shortcuts
-- [ ] Test with multiple windows
+- [ ] Change global interval
+- [ ] Set a per-tab interval override
+- [ ] Exclude a tab and verify it is skipped
+- [ ] Enable "refresh before show" and verify reload
+- [ ] Toggle fullscreen mode
+- [ ] Toggle overlay display
+- [ ] Verify overlay countdown and next-tab title
+- [ ] Use overlay prev/next/pause buttons
+- [ ] Verify keyboard shortcuts (Ctrl+Shift+R, Ctrl+Shift+N)
+- [ ] Enable auto-start, restart browser, verify rotation starts
+- [ ] Test with a single tab (rotation should have no effect)
 
 ## Troubleshooting
 
@@ -239,14 +196,12 @@ chrome.runtime.sendMessage({
 
 ### Settings not saving
 1. Clear extension data: `chrome://extensions` → Click details → "Clear data"
-2. Check browser sync is enabled
-3. Try exporting/importing configuration
+2. Try removing and re-loading the extension
 
 ### High CPU usage
 1. Increase rotation interval
-2. Disable debug mode
-3. Check for extension conflicts
-4. Report the issue
+2. Check for extension conflicts
+3. Report the issue
 
 ### Keyboard shortcuts not working
 1. Check custom keyboard shortcut settings: `chrome://extensions/shortcuts`
@@ -275,10 +230,10 @@ chrome.runtime.sendMessage({
 ### Adding Features
 
 1. Add core logic to `service-worker.js`
-2. Add UI components to `popup.html` and `popup.css`
-3. Add popup interactions to `scripts/popup.js`
-4. Add utility functions to `scripts/utils.js`
-5. Add tests to `tests/unit-tests.js`
+2. Add UI components and styles to `popup.html`
+3. Add popup interactions to `popup.js`
+4. Add overlay features to `overlay.js`
+5. Update `manifest.json` if new permissions are needed
 
 ### Git Workflow
 
@@ -290,11 +245,10 @@ chrome.runtime.sendMessage({
 
 ## Performance Considerations
 
-- **Interval Limitations**: Minimum 1s, maximum 60s (Chrome alarm API)
-- **Tab Limit**: Works efficiently with up to 50+ tabs
-- **Memory**: ~2-5MB memory usage
-- **CPU**: Minimal impact, uses Chrome alarms instead of timers
-- **Storage**: ~50KB for configuration and statistics
+- **Interval Range**: 1–3600 seconds
+- **Tab Limit**: Works efficiently with many open tabs
+- **Memory**: Lightweight; uses `setTimeout` for rotation timing
+- **Storage**: Small footprint for configuration in `chrome.storage.local`
 
 ## Browser Compatibility
 
@@ -305,11 +259,11 @@ chrome.runtime.sendMessage({
 
 ## Known Issues
 
-- Media detection requires additional implementation
-- Priority rotation pattern not yet implemented
-- Idle detection coming soon
+- Priority and random rotation patterns are not yet implemented
+- Media playback detection is not yet implemented
+- Idle detection is not yet implemented
 
-## Recently Fixed (v2.0.1)
+## Recently Fixed (v2.0.0)
 
 - ✅ Race conditions in tab navigation
 - ✅ Memory leaks from timers
@@ -322,13 +276,18 @@ For details, see [STABILITY_FIXES.md](STABILITY_FIXES.md)
 
 ## Roadmap
 
-- [ ] Media playback detection
-- [ ] Tab priority system
+- [ ] Random and shuffle rotation modes
+- [ ] Priority-based rotation
+- [ ] Media playback detection (auto-pause)
 - [ ] Idle detection with auto-pause
+- [ ] URL pattern exclusion (regex)
+- [ ] Statistics tracking (rotation count, time per tab)
+- [ ] Debug mode with exportable logs
+- [ ] Import/export configuration
+- [ ] Badge counter showing rotation position
+- [ ] Dark mode
 - [ ] Cloud sync
 - [ ] Advanced scheduling
-- [ ] Analytics dashboard
-- [ ] Themes support
 - [ ] Firefox extension
 
 ## Contributing
@@ -353,7 +312,7 @@ For issues, questions, or suggestions:
 
 ## Changelog
 
-### v2.0.1 (Current - Stability Release)
+### v2.0.0 (Current - Stability Release)
 - **Critical Stability Fixes**
   - Fixed race condition in tab navigation preventing concurrent calls
   - Fixed async/await handling in message handlers
@@ -364,24 +323,15 @@ For issues, questions, or suggestions:
   - Added comprehensive error logging for debugging
   - Added user-friendly error messages in popup
   - All message passing now has proper error handlers
-- **Code Quality**
-  - Extracted helper function for timer cleanup
-  - Added inline documentation for critical sections
-  - All code passes security scan (CodeQL)
+- **UI Improvements**
+  - Added status banner with animated indicator
+  - Added input validation (1–3600 seconds) with visual feedback
+  - Added current tab highlighting in popup
+  - Added auto-start on browser launch option
 - **Documentation**
   - Added STABILITY_FIXES.md with detailed fix descriptions
-  - Added TESTING_GUIDE.md with 10 comprehensive test cases
+  - Added TESTING_GUIDE.md with comprehensive test cases
   - Added SUMMARY.md with complete overview
-
-### v2.0.0
-- Complete rewrite with Manifest V3
-- New UI with statistics
-- Multiple rotation patterns
-- Selective tab control
-- Keyboard shortcuts
-- Error handling and recovery
-- Configuration persistence
-- Debug mode
 
 ### v1.0.0 (Original)
 - Initial release
