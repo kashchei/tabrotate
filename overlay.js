@@ -55,6 +55,7 @@
 
   const container = document.createElement('div');
   container.id = 'kiosk-tab-overlay';
+  container.style.display = 'none'; // hidden until state is confirmed
   container.innerHTML = `
     <div style="display: flex; align-items: center; gap: 10px;">
       <button id="kiosk-pause-toggle" class="kiosk-btn">⏸</button>
@@ -73,23 +74,44 @@
   // Track overlay state locally for reliable pause/play toggle
   // Will be synchronized with actual state when first COUNTDOWN message arrives
   let overlayState = 'running';
-  
+
+  function removeOverlay() {
+    const overlay = document.getElementById('kiosk-tab-overlay');
+    if (overlay) overlay.remove();
+    chrome.runtime.onMessage.removeListener(messageListener);
+    clearInterval(stateCheckInterval);
+  }
+
+  // Periodic state check: hide overlay if rotation is stopped or service worker is unreachable.
+  // This handles service worker restarts and any missed HIDE_OVERLAY messages.
+  const stateCheckInterval = setInterval(() => {
+    chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
+      if (!state || state.status === 'stopped') {
+        removeOverlay();
+      }
+    }).catch(() => {
+      // Cannot reach service worker – hide the overlay to avoid it being stuck
+      removeOverlay();
+    });
+  }, 3000);
+
   // Initialize button state from service worker
   chrome.runtime.sendMessage({ type: 'GET_STATE' }).then((state) => {
-    if (state && state.status) {
-      if (state.status === 'stopped') {
-        const overlay = document.getElementById('kiosk-tab-overlay');
-        if (overlay) overlay.remove();
-        return;
-      }
+    if (state && (state.status === 'running' || state.status === 'paused')) {
       overlayState = state.status;
+      const overlay = document.getElementById('kiosk-tab-overlay');
+      if (overlay) overlay.style.display = 'flex'; // show now that state is confirmed
       const pauseBtn = document.getElementById('kiosk-pause-toggle');
       if (pauseBtn) {
         pauseBtn.innerText = state.status === 'running' ? '⏸' : '▶';
       }
+    } else {
+      // Stopped or unknown state – remove immediately
+      removeOverlay();
     }
-  }).catch((err) => {
-    console.log('Failed to get initial state:', err.message);
+  }).catch(() => {
+    // Cannot reach service worker – remove overlay
+    removeOverlay();
   });
 
   // Message listener for countdown updates
@@ -108,9 +130,7 @@
         pauseBtn.innerText = msg.status === 'running' ? '⏸' : '▶';
       }
     } else if (msg.type === 'HIDE_OVERLAY') {
-      const overlay = document.getElementById('kiosk-tab-overlay');
-      if (overlay) overlay.remove();
-      chrome.runtime.onMessage.removeListener(messageListener);
+      removeOverlay();
     }
   };
 
