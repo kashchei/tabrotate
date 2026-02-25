@@ -41,9 +41,9 @@ chrome.runtime.onStartup.addListener(async () => {
   }
 });
 
-chrome.runtime.onInstalled.addListener(() => {
-  loadState();
-  updateIcon('red');
+chrome.runtime.onInstalled.addListener(async () => {
+  await loadState();
+  updateIcon(state.status === 'running' ? 'green' : state.status === 'paused' ? 'yellow' : 'red');
 });
 
 async function loadState() {
@@ -90,6 +90,11 @@ async function navigate(direction) {
       return;
     }
 
+    // Clamp currentIndex to valid range before computing next position
+    if (state.currentIndex >= activeTabs.length) {
+      state.currentIndex = 0;
+    }
+
     if (direction === 'next') {
       state.currentIndex = (state.currentIndex + 1) % activeTabs.length;
     } else if (direction === 'prev') {
@@ -130,9 +135,14 @@ async function navigate(direction) {
     }
 
     if (state.globalConfig.fullscreenEnabled) {
-      chrome.windows.getCurrent(win => {
-        if (win.state !== 'fullscreen') chrome.windows.update(win.id, { state: 'fullscreen' });
-      });
+      try {
+        const win = await chrome.windows.getCurrent();
+        if (win.state !== 'fullscreen') {
+          await chrome.windows.update(win.id, { state: 'fullscreen' });
+        }
+      } catch (err) {
+        console.error("Failed to set fullscreen:", err.message);
+      }
     }
 
     if (state.status === 'running') {
@@ -250,4 +260,27 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     }
   })();
   return true; // Keep message channel open for async response
+});
+
+chrome.commands.onCommand.addListener(async (command) => {
+  if (command === 'toggle-rotation') {
+    if (state.status === 'running') {
+      state.status = 'paused';
+      updateIcon('yellow');
+      clearRotationTimer();
+    } else {
+      state.status = 'running';
+      updateIcon('green');
+      await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
+      await rotate();
+    }
+    await saveState();
+  } else if (command === 'next-tab') {
+    await navigate('next');
+  }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+  delete refreshRegistry[tabId];
+  delete state.tabsConfig[tabId];
 });
