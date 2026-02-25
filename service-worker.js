@@ -262,24 +262,6 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   return true; // Keep message channel open for async response
 });
 
-chrome.commands.onCommand.addListener(async (command) => {
-  if (command === 'toggle-rotation') {
-    if (state.status === 'running') {
-      state.status = 'paused';
-      updateIcon('yellow');
-      clearRotationTimer();
-    } else {
-      state.status = 'running';
-      updateIcon('green');
-      await broadcastToAllTabs({ type: 'SHOW_OVERLAY' });
-      await rotate();
-    }
-    await saveState();
-  } else if (command === 'next-tab') {
-    await navigate('next');
-  }
-});
-
 chrome.tabs.onRemoved.addListener((tabId) => {
   delete refreshRegistry[tabId];
   delete state.tabsConfig[tabId];

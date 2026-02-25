@@ -18,10 +18,6 @@ A Chrome extension for automatic tab rotation with per-tab controls and an on-pa
 - **Input Validation**: Interval inputs are validated (1–3600 seconds) with visual feedback
 - **Error Notifications**: Toast-style error messages for configuration and connection issues
 
-### Keyboard Shortcuts
-- **Ctrl+Shift+R** (Windows/Linux) or **Cmd+Shift+R** (Mac): Toggle rotation on/off
-- **Ctrl+Shift+N** (Windows/Linux) or **Cmd+Shift+N** (Mac): Rotate to next tab
-
 ## Installation
 
 ### From Chrome Web Store
@@ -112,7 +108,6 @@ tabrotate/
 - Tab rotation algorithm (sequential, next/prev navigation)
 - State management and persistence (`chrome.storage.local`)
 - Message handling from popup and overlay
-- Keyboard command handling
 - Fullscreen management
 - Race-condition-safe navigation via a mutex
 
@@ -182,7 +177,6 @@ chrome.runtime.sendMessage({
 - [ ] Toggle overlay display
 - [ ] Verify overlay countdown and next-tab title
 - [ ] Use overlay prev/next/pause buttons
-- [ ] Verify keyboard shortcuts (Ctrl+Shift+R, Ctrl+Shift+N)
 - [ ] Enable auto-start, restart browser, verify rotation starts
 - [ ] Test with a single tab (rotation should have no effect)
 
@@ -202,11 +196,6 @@ chrome.runtime.sendMessage({
 1. Increase rotation interval
 2. Check for extension conflicts
 3. Report the issue
-
-### Keyboard shortcuts not working
-1. Check custom keyboard shortcut settings: `chrome://extensions/shortcuts`
-2. Verify shortcuts don't conflict with other extensions
-3. Restart Chrome
 
 ## Development
 
