@@ -1,4 +1,4 @@
-# Tab Rotator Pro - Implementation Summary
+# Tab Rotation - Implementation Summary
 
 ## 🎯 What Was Done
 
