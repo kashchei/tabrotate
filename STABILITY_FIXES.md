@@ -1,7 +1,7 @@
 # Stability Fixes Applied
 
 ## Overview
-This document describes the critical stability issues identified and fixed in the Tab Rotator Pro extension after the last commit.
+This document describes the critical stability issues identified and fixed in the Tab Rotation extension after the last commit.
 
 ## Issues Identified and Fixed
 

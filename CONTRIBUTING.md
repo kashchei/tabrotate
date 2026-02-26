@@ -1,6 +1,6 @@
-# Contributing to Tab Rotator Pro
+# Contributing to Tab Rotation
 
-Thank you for considering contributing to Tab Rotator Pro! This document provides guidelines and instructions for contributing.
+Thank you for considering contributing to Tab Rotation! This document provides guidelines and instructions for contributing.
 
 ## Code of Conduct
 
