@@ -1,7 +1,7 @@
 # Stability Fix Summary
 
 ## Problem Statement
-The Tab Rotator Pro extension was experiencing instability issues after the last commit, causing crashes, race conditions, and unreliable behavior.
+The Tab Rotation extension was experiencing instability issues after the last commit, causing crashes, race conditions, and unreliable behavior.
 
 ## Root Causes Identified
 

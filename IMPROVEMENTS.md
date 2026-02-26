@@ -1,4 +1,4 @@
-# Tab Rotator Pro - Code Review & Improvement Suggestions
+# Tab Rotation - Code Review & Improvement Suggestions
 
 ## 📊 Current State Assessment
 

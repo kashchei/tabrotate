@@ -1,4 +1,4 @@
-# Tab Rotator Pro
+# Tab Rotation
 
 A Chrome extension for automatic tab rotation with per-tab controls and an on-page overlay countdown.
 
@@ -47,7 +47,7 @@ A Chrome extension for automatic tab rotation with per-tab controls and an on-pa
 
 ### Basic Usage
 
-1. Click the Tab Rotator Pro icon in your toolbar
+1. Click the Tab Rotation icon in your toolbar
 2. Adjust the default interval and toggle settings as needed
 3. Use the per-tab checkboxes to include/exclude specific tabs or set per-tab intervals
 4. Click **Start** to begin rotating tabs

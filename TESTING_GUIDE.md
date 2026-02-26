@@ -1,6 +1,6 @@
 # Stability Testing Guide
 
-This guide helps test the stability fixes applied to Tab Rotator Pro.
+This guide helps test the stability fixes applied to Tab Rotation.
 
 ## Prerequisites
 - Chrome/Chromium browser with Developer Mode enabled
